@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"sync"
+	"time"
 )
 
 type DieselTruck struct {
@@ -24,32 +25,24 @@ type Truck interface {
 }
 
 func (t *DieselTruck) loadCargo() error {
-	fmt.Printf("Loading truck %+v \n", t)
 	t.cargo += 2
-	// return fmt.Errorf("Error while loading truck: %+v \n", t)
 	return nil
 }
 
 func (t *DieselTruck) unloadCargo() error {
-	fmt.Printf("Unloading truck %+v \n", t)
-	t.cargo -= 2
-	// return fmt.Errorf("Error while unloading truck: %+v \n", t)
+	t.cargo = 0
 	return nil
 }
 
 func (e *ElectricTruck) loadCargo() error {
-	fmt.Printf("Loading truck %+v \n", e)
 	e.cargo += 2
-	e.battery -= 2
-	// return fmt.Errorf("Error while loading truck: %+v \n", e)
+	e.battery -= 2.0
 	return nil
 }
 
 func (e *ElectricTruck) unloadCargo() error {
-	fmt.Printf("Unloading truck %+v \n", e)
-	e.cargo -= 2
-	e.battery -= 1
-	// return fmt.Errorf("Error while unloading truck: %+v \n", e)
+	e.cargo = 0
+	e.battery -= 1.0
 	return nil
 }
 
@@ -57,26 +50,39 @@ func (e *ElectricTruck) unloadCargo() error {
 func process(t Truck) error {
 	fmt.Printf("Processing truck %+v \n", t)
 
-	if err := t.unloadCargo(); err != nil {
-		return fmt.Errorf("Couldn't unload truck: %w", err)
-	}
+	time.Sleep(time.Second)
 
 	if err := t.loadCargo(); err != nil {
 		return fmt.Errorf("Couldn't load truck: %w", err)
+	}
+	if err := t.unloadCargo(); err != nil {
+		return fmt.Errorf("Couldn't unload truck: %w", err)
 	}
 
 	return nil
 }
 
 func main() {
-	dt := &DieselTruck{id: "Truck 1", cargo: 0, plates: "WN-710EM"}
-	et := &ElectricTruck{id: "Truck 1", cargo: 0, plates: "WN-710EM", battery: 100}
-
-	if err := process(dt); err != nil {
-		log.Fatalf("Error processing truck: %s", err)
+	trucks := []Truck{
+		&DieselTruck{id: "Truck 1", cargo: 0, plates: "WN-710EM"},
+		&ElectricTruck{id: "Truck 2", cargo: 0, plates: "WN-710EM", battery: 100},
+		&DieselTruck{id: "Truck 3", cargo: 0, plates: "WN-710EM"},
+		&ElectricTruck{id: "Truck 4", cargo: 0, plates: "WN-710EM", battery: 100},
 	}
 
-	if err := process(et); err != nil {
-		log.Fatalf("Error processing truck: %s", err)
+	var wg sync.WaitGroup
+
+	for _, t := range trucks {
+		wg.Add(1)
+
+		go func(t Truck) {
+			if err := process(t); err != nil {
+				fmt.Printf("Error processing truck %s: %v\n", t, err)
+			}
+
+			wg.Done()
+		}(t)
 	}
+
+	wg.Wait()
 }
