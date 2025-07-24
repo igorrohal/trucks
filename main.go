@@ -77,7 +77,7 @@ func process(ctx context.Context, t Truck) error {
 		return fmt.Errorf("couldn't unload truck: %w", err)
 	}
 
-	return nil
+	return fmt.Errorf("couldn't process truck: %+v", t)
 }
 
 func main() {
@@ -94,18 +94,23 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+	errsChan := make(chan error, len(trucks))
 
 	for _, t := range trucks {
 		wg.Add(1)
 
 		go func(t Truck) {
 			if err := process(ctx, t); err != nil {
-				fmt.Printf("Error processing truck %+v: %s\n", t, err)
+				errsChan <- err
 			}
-
 			wg.Done()
 		}(t)
 	}
 
 	wg.Wait()
+	close(errsChan)
+
+	for err := range errsChan {
+		fmt.Printf("Error processing truck (%s)\n", err)
+	}
 }
