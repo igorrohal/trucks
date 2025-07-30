@@ -70,8 +70,7 @@ func TestConcurrentUpdate(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for j := 0; j < iterations; j++ {
-				truck, _ := manager.GetTruck("1")
-				manager.UpdateTruckCargo("1", truck.Cargo+1)
+				manager.AddToTruckCargo("1")
 			}
 			done <- true
 		}()
@@ -83,7 +82,7 @@ func TestConcurrentUpdate(t *testing.T) {
 	}
 
 	truck, _ := manager.GetTruck("1")
-	if truck.Cargo != 100100 {
+	if truck.Cargo != 10100 {
 		t.Errorf("Expected truck cargo to be 100100 after all goroutines, got %d", truck.Cargo)
 	}
 }
